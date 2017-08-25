@@ -1,66 +1,41 @@
-## springboot-elasticsearch
-> 基于springboot的web项目，通过elasticsearch提供的Java API 进行查询操作.
+package com.elasticsearch.controller;
 
-#### 起因
-项目在一个查询要在亚秒级计算（分组、累加、平均）大量数据的结果。官方提供的API过于简单，自己在做项目中遇到了一些坑，并总结了一些API的使用，简单分享一下。
+import org.elasticsearch.action.search.SearchResponse;
+import org.elasticsearch.client.transport.TransportClient;
+import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.script.Script;
+import org.elasticsearch.script.ScriptType;
+import org.elasticsearch.search.aggregations.AggregationBuilders;
+import org.elasticsearch.search.aggregations.bucket.terms.Terms;
+import org.elasticsearch.search.aggregations.metrics.sum.Sum;
+import org.elasticsearch.search.aggregations.pipeline.PipelineAggregatorBuilders;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RestController;
 
-#### 前置条件
-有一个elasticsearch服务
+import javax.annotation.Resource;
+import java.util.Collections;
+import java.util.Map;
 
-#### 配置
-> demo是基于springboot快速构建了一个web应用。elasticsearch提供了一个客户端:`TransportClient`,首先我们来配置一下
+/**
+ * Created by baishuai on 2017/8/24.
+ */
+@RestController
+public class TestController {
 
-##### 如果在main方法里面执行可以直接创建一个客户端连接
-```
-TransportClient client = new PreBuiltTransportClient(Settings.EMPTY)
-                .addTransportAddress(new InetSocketTransportAddress(InetAddress.getByName("172.16.3.121"), 9300));
-```
+    @Resource
+    TransportClient client;//注入es操作对象
 
-##### 如果在springboot项目中。配置一下，这样我们可以直接注入使用了。
+    @RequestMapping(value = "/test",method = RequestMethod.GET)
+    public String test(){
 
-```
-@Configuration
-public class ElasticSearchConfig {
-
-    @Value("${spring.elasticsearch.host}")
-    private String host;//elasticsearch的地址
-
-    @Value("${spring.elasticsearch.port}")
-    private Integer port;//elasticsearch的端口
-
-    private static final Logger LOG = LogManager.getLogger(ElasticSearchConfig.class);
-
-    @Bean
-    public TransportClient client(){
-        TransportClient client = null;
-        try {
-
-            client = new PreBuiltTransportClient(Settings.EMPTY)
-                    .addTransportAddress(new InetSocketTransportAddress(InetAddress.getByName(host), port));
-        } catch (UnknownHostException e) {
-            LOG.error("创建elasticsearch客户端失败");
-            e.printStackTrace();
-        }
-        LOG.info("创建elasticsearch客户端成功");
-        return client;
-    }
-
-}
-
-配置完毕之后，我们就可以使用了。这里写了一个简单的demo，汇总了常用的一些API使用。
-```
-
-#### 代码示例
-> 这个代码示例满足了查询所需，查询条件，分组计算，分组排序等
-
-```
-    Map<String,Object> map = Collections.emptyMap();
+        Map<String,Object> map = Collections.emptyMap();
 
         Script script = new Script(ScriptType.INLINE, "painless","params._value0 > 0",map);  //提前定义好查询销量是否大于1000的脚本，类似SQL里面的having
 
         long beginTime = System.currentTimeMillis();
 
-        SearchResponse sr = client.prepareSearch("adele").setTypes("sale")
+        SearchResponse sr = client.prepareSearch("dm_di").setTypes("sale") //要查询的表
                 .setQuery(QueryBuilders.boolQuery()
                         .must(QueryBuilders.termQuery("store_name.keyword", "xxx旗舰店"))  //挨个设置查询条件，没有就不加，如果是字符串类型的，要加keyword后缀
                         .must(QueryBuilders.termQuery("department_name.keyword", "玎"))
@@ -93,18 +68,8 @@ public class ElasticSearchConfig {
 
         long endTime = System.currentTimeMillis();
         System.out.println("查询耗时" + ( endTime - beginTime ) + "毫秒");
-    
-```
 
-#### demo地址
+        return "Hello,elasticsearch";
+    }
 
-[springboot-elasticsearch](https://github.com/whiney/springboot-elasticsearch.git)
-
-1. 启动项目
-2. 访问http://localhost:9999/test
-3. 查看后端打印
-
-#### 参考链接
-[Search API](https://www.elastic.co/guide/en/elasticsearch/client/java-api/current/java-search.html)
-
-有一些坑是我领导踩得，部分代码已得授权。
+}
