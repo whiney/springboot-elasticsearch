@@ -51,6 +51,9 @@ public class TestController {
 
                 .execute().actionGet();
 
+        System.out.println("---------");
+
+
         Terms terms = sr.getAggregations().get("by_product_code");   //查询遍历第一个根据货号分组的aggregation
 
         System.out.println(terms.getBuckets().size());
